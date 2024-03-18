@@ -1,0 +1,3 @@
+﻿  triagle.cpp
+C:\Users\Admin\Git1\laba1\triagle.cpp(22,17): warning C4244: =: преобразование "double" в "int", возможна потеря данных
+  triagle.vcxproj -> C:\Users\Admin\Git1\laba1\x64\Debug\triagle.exe
