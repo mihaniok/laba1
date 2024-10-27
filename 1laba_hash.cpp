@@ -1,17 +1,17 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <sstream>
-#include <fstream>
 
 using namespace std;
 
 // Структура для хранения пары ключ-значение
 struct KeyValuePair {
-    int key;
+    string key;
     string value;
     KeyValuePair* next;
 
-    KeyValuePair(int k, const string &v) : key(k), value(v), next(nullptr) {}
+    KeyValuePair(const string& k, const string& v) : key(k), value(v), next(nullptr) {}
 };
 
 // Размер хеш-таблицы
@@ -21,64 +21,71 @@ const int capacity = 10;
 struct HashTable {
     KeyValuePair* table[capacity];
 
-    // Инициализация
+    // Конструктор, инициализирующий массив пустыми цепочками
     HashTable() {
-        for (int i = 0; i < capacity; ++i) {
-            table[i] = nullptr;  // Изначально все ячейки пусты
+        for (int i = 0; i < capacity; i++) {
+            table[i] = nullptr;
+        }
+    }
+
+    // Деструктор для освобождения памяти
+    ~HashTable() {
+        for (int i = 0; i < capacity; i++) {
+            KeyValuePair* current = table[i];
+            while (current != nullptr) {
+                KeyValuePair* toDelete = current;
+                current = current->next;
+                delete toDelete;
+            }
         }
     }
 };
 
-// Хеш-функция
-int hashFunction(int key) {
-    return key % capacity;
+// Хеш-функция: вычисляет индекс по сумме ASCII-кодов символов ключа
+int hashFunction(const string& key) {
+    int sum = 0;
+    for (char c : key) {
+        sum += static_cast<int>(c);
+    }
+    return sum % capacity;
 }
 
 // Добавление элемента (ключ-значение) в хеш-таблицу
-void insert(HashTable &hashTable, int key, const string &value) {
+void insert(HashTable& hashTable, const string& key, const string& value) {
     int index = hashFunction(key);
     KeyValuePair* newNode = new KeyValuePair(key, value);
+    KeyValuePair* current = hashTable.table[index];
 
-    // Если в ячейке еще нет элементов
-    if (hashTable.table[index] == nullptr) {
-        hashTable.table[index] = newNode;
-    } else {
-        // Обрабатываем коллизию методом цепочек
-        KeyValuePair* current = hashTable.table[index];
-        while (current->next != nullptr) {
-            if (current->key == key) {
-                current->value = value;  // Обновляем значение, если ключ уже существует
-                delete newNode;
-                return;
-            }
-            current = current->next;
-        }
-        // Если достигли конца цепочки
+    // Проверяем, существует ли элемент с таким же ключом
+    while (current != nullptr) {
         if (current->key == key) {
-            current->value = value;  // Обновляем значение
+            current->value = value;  // Обновляем значение, если ключ уже существует
             delete newNode;
-        } else {
-            current->next = newNode;  // Добавляем новый элемент в конец цепочки
+            return;
         }
+        current = current->next;
     }
+
+    // Вставляем новый элемент в начало цепочки
+    newNode->next = hashTable.table[index];
+    hashTable.table[index] = newNode;
 }
 
 // Получение значения по ключу
-string get(const HashTable &hashTable, int key) {
+string get(const HashTable& hashTable, const string& key) {
     int index = hashFunction(key);
     KeyValuePair* current = hashTable.table[index];
-
     while (current != nullptr) {
         if (current->key == key) {
             return current->value;
         }
         current = current->next;
     }
-    return "Ключ не найден";  // Если ключ не найден
+    return "Key not found";
 }
 
 // Удаление элемента по ключу
-void remove(HashTable &hashTable, int key) {
+void remove(HashTable& hashTable, const string& key) {
     int index = hashFunction(key);
     KeyValuePair* current = hashTable.table[index];
     KeyValuePair* prev = nullptr;
@@ -86,22 +93,23 @@ void remove(HashTable &hashTable, int key) {
     while (current != nullptr) {
         if (current->key == key) {
             if (prev == nullptr) {
-                hashTable.table[index] = current->next;  // Удаляем первый элемент в цепочке
+                hashTable.table[index] = current->next;
             } else {
-                prev->next = current->next;  // Удаляем элемент из середины или конца цепочки
+                prev->next = current->next;
             }
-            delete current;  // Освобождаем память
+            delete current;
+            cout << "Key removed." << endl;
             return;
         }
         prev = current;
         current = current->next;
     }
-    cout << "Ключ не найден" << endl;
+    cout << "Key not found." << endl;
 }
 
 // Вывод всей хеш-таблицы
-void print(const HashTable &hashTable) {
-    for (int i = 0; i < capacity; ++i) {
+void print(const HashTable& hashTable) {
+    for (int i = 0; i < capacity; i++) {
         cout << "[" << i << "]: ";
         KeyValuePair* current = hashTable.table[i];
         while (current != nullptr) {
@@ -113,81 +121,59 @@ void print(const HashTable &hashTable) {
 }
 
 // Сохранение хеш-таблицы в файл
-void saveToFile(const HashTable &hashTable, const string &filename) {
+void saveToFile(const HashTable& hashTable, const string& filename) {
     ofstream file(filename);
-    if (!file.is_open()) {
-        cerr << "Не удалось открыть файл для записи!" << endl;
+    if (!file) {
+        cout << "Error opening file for writing!" << endl;
         return;
     }
-
-    for (int i = 0; i < capacity; ++i) {
+    for (int i = 0; i < capacity; i++) {
         KeyValuePair* current = hashTable.table[i];
         while (current != nullptr) {
-            file << current->key << " " << current->value << endl;  // Сохраняем ключ-значение в файл
+            file << current->key << " " << current->value << endl;
             current = current->next;
         }
     }
     file.close();
-    cout << "Данные сохранены в файл " << filename << endl;
+    cout << "Hash table saved to file." << endl;
 }
 
 // Загрузка хеш-таблицы из файла
-void loadFromFile(HashTable &hashTable, const string &filename) {
+void loadFromFile(HashTable& hashTable, const string& filename) {
     ifstream file(filename);
-    if (!file.is_open()) {
-        cerr << "Не удалось открыть файл для чтения!" << endl;
+    if (!file) {
+        cout << "Error opening file for reading!" << endl;
         return;
     }
-
-    // Очищаем текущую таблицу
-    for (int i = 0; i < capacity; ++i) {
-        while (hashTable.table[i] != nullptr) {
-            KeyValuePair* temp = hashTable.table[i];
-            hashTable.table[i] = hashTable.table[i]->next;
-            delete temp;
-        }
-    }
-
-    int key;
-    string value;
+    string key, value;
     while (file >> key >> value) {
-        insert(hashTable, key, value);  // Вставляем ключ-значение в хеш-таблицу
+        insert(hashTable, key, value);
     }
-
     file.close();
-    cout << "Данные загружены из файла " << filename << endl;
+    cout << "Hash table loaded from file." << endl;
 }
 
 // Функция обработки команд
-void processCommand(HashTable &hashTable, const string &commandLine) {
+void processCommand(HashTable& hashTable, const string& commandLine) {
     stringstream ss(commandLine);
-    string command;
+    string command, key, value;
     ss >> command;
 
     if (command == "INSERT") {
-        int key;
-        string value;
         ss >> key >> value;
         insert(hashTable, key, value);
-
     } else if (command == "GET") {
-        int key;
         ss >> key;
-        cout << "Значение: " << get(hashTable, key) << endl;
-
+        cout << "Value: " << get(hashTable, key) << endl;
     } else if (command == "REMOVE") {
-        int key;
         ss >> key;
         remove(hashTable, key);
-
     } else if (command == "PRINT") {
         print(hashTable);
-
     } else if (command == "SAVE") {
         string filename;
         ss >> filename;
         saveToFile(hashTable, filename);
-
     } else if (command == "LOAD") {
         string filename;
         ss >> filename;
@@ -196,28 +182,27 @@ void processCommand(HashTable &hashTable, const string &commandLine) {
 }
 
 int main() {
-    HashTable hashTable;  // Инициализация хеш-таблицы
+    HashTable hashTable;
     string commandLine;
 
     while (true) {
         getline(cin, commandLine);
-
         if (commandLine == "EXIT") {
-            break;  // Выход из программы
+            break;
         }
-
-        processCommand(hashTable, commandLine);  // Обработка команды
+        processCommand(hashTable, commandLine);
     }
 
     return 0;
 }
 
+
 /*
-INSERT <key> <value> — добавляет элемент с ключом и значением. 
-GET <key> — получает значение элемента по ключу. 
-REMOVE <key> — удаляет элемент по ключу. 
-PRINT — выводит текущее состояние хеш-таблицы.
-SAVE <filename> — сохраняет текущую таблицу в файл.
-LOAD <filename> — загружает данные в таблицу из файла.
-EXIT — завершает выполнение программы.
+INSERT <ключ> <значение>: Вставка пары "ключ-значение" в хеш-таблицу
+GET <ключ>: Получение значения по ключу
+REMOVE <ключ>: Удаление элемента по ключу
+PRINT: Вывод текущего состояния хеш-таблицы
+SAVE <имя_файла>: Сохранение хеш-таблицы в файл
+LOAD <имя_файла>: Загрузка хеш-таблицы из файла
+EXIT: Завершение программы
 */
