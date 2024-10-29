@@ -5,30 +5,45 @@
 
 using namespace std;
 
-struct StaticArray {
+struct Array {
     static const int capacity = 10000;  // фиксированная вместимость
-    int data[capacity];  // массив фиксированного размера
+    int data[capacity];  // массив 
     int length;          // текущее количество элементов
+    Array() : length(0) {} 
 
-    // Конструктор
-    StaticArray() : length(0) {}
-
-    // Добавление элемента в конец
+    // функция добавления эл. в конец
     void push_back(int value) {
-        data[length++] = value;  // добавляем элемент в конец
+        if (length < capacity) {
+            data[length++] = value;  // добавляем элемент в конец
+        } else {
+            cout << "Array is full" << endl;
+        }
     }
 
     // Удаление элемента по индексу
     void remove(int index) {
-        for (int i = index; i < length - 1; i++) {
-            data[i] = data[i + 1];  // сдвигаем элементы влево
+        if (index >= 0 && index < length) {
+            for (int i = index; i < length - 1; i++) {
+                data[i] = data[i + 1];  // сдвигаем элементы влево
+            }
+            length--;
+        } else {
+            cout << "Invalid index" << endl;
         }
-        length--;
+    }
+
+    // Замена элемента по индексу
+    void replace(int index, int value) {
+        if (index >= 0 && index < length) {
+            data[index] = value;  // заменяем элемент
+        } else {
+            cout << "Invalid index" << endl;
+        }
     }
 
     // Получение элемента по индексу
     int get(int index) const {
-        return data[index];
+        return index >= 0 && index < length ? data[index] : -1;  // возвращает -1 при неверном индексе
     }
 
     // Получение длины массива
@@ -53,9 +68,9 @@ struct StaticArray {
                 outFile << data[i] << " ";  // записываем элементы массива
             }
             outFile.close();
-            cout << "Массив сохранен в файл " << filename << endl;
+            cout << "Array saved in file: " << filename << endl;
         } else {
-            cout << "Не удалось открыть файл для записи!" << endl;
+            cout << "Cannot open file" << endl;
         }
     }
 
@@ -68,39 +83,45 @@ struct StaticArray {
                 inFile >> data[i];  // считываем элементы массива
             }
             inFile.close();
-            cout << "Массив загружен из файла " << filename << endl;
+            cout << "Array loaded from file: " << filename << endl;
         } else {
-            cout << "Не удалось открыть файл для чтения!" << endl;
+            cout << "Cannot open file" << endl;
         }
     }
 };
 
 // Функция обработки команд
-void processCommand(StaticArray &arr, const string &commandLine) {
+void processCommand(Array &arr, const string &commandLine) {
     stringstream ss(commandLine);
     string command;
     ss >> command;
 
-    if (command == "MPUSH") {
+    if (command == "PUSH") {
         int value;
         ss >> value;
         arr.push_back(value);  // добавляем значение в конец массива
 
-    } else if (command == "MDEL") {
+    } else if (command == "DEL") {
         int index;
         ss >> index;
-        if (index >= 0 && index < arr.size()) {
-            arr.remove(index);  // удаляем элемент по индексу
-        }
+        arr.remove(index);  // удаляем элемент по индексу
 
-    } else if (command == "MGET") {
+    } else if (command == "REPLACE") {
+        int index, value;
+        ss >> index >> value;
+        arr.replace(index, value);  // заменяем элемент по индексу
+
+    } else if (command == "GET") {
         int index;
         ss >> index;
-        if (index >= 0 && index < arr.size()) {
-            cout << arr.get(index) << endl;
+        int result = arr.get(index);
+        if (result != -1) {
+            cout << result << endl;
+        } else {
+            cout << "Invalid index" << endl;
         }
 
-    } else if (command == "MPRINT") {
+    } else if (command == "PRINT") {
         arr.print();
 
     } else if (command == "SAVE") {
@@ -116,7 +137,7 @@ void processCommand(StaticArray &arr, const string &commandLine) {
 }
 
 int main() {
-    StaticArray arr;
+    Array arr;
     string commandLine;
 
     while (true) {
